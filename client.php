@@ -578,4 +578,82 @@ function uc_check_version() {
 	return is_array($data) ? $data : $return;
 }
 
+
+
+
+/**
+ *
+ */
+function uc_get_object($username, $isuid = 0, $type = null) {
+	$data = uc_get_user($username, $isuid);
+	if ($data <= 0) {
+		return $data;
+	}
+	$return = call_user_func(UC_API_FUNC, 'object', 'get', array('isuid' => intval($isuid), 'username' => $username, 'type' => $type));
+	return UC_CONNECT == 'mysql' ? $return : uc_unserialize($return);
+}
+
+/**
+ *
+ */
+function uc_object_set($username, $isuid = 0, $filed = null, $value = null) {
+	$data = uc_get_user($username, $isuid);
+	if ($data <= 0) {
+		return $data;
+	}
+	if ($filed == null) {
+		return false;
+	}
+	$return = call_user_func('uc_api_post', 'object', 'set', array('isuid' => intval($isuid), 'username' => $username, 'filed' => $filed, 'value' => $value));
+	return $return;
+}
+
+/**
+ * 返回-11分数不足
+ */
+function uc_object_addint($username, $isuid = 0, $filed = null, $value = null) {
+	$data = uc_get_user($username, $isuid);
+	if ($data <= 0) {
+		return $data;
+	}
+	if (!in_array($filed, array('credit'))) {
+		$return = false;
+	} else {
+		$return = call_user_func('uc_api_post', 'object', 'add', array('isuid' => intval($isuid), 'username' => $username, 'filed' => $filed, 'value' => $value));
+	}
+	return $return;
+}
+
+/*
+ *
+ *
+ * 这里面的三个函数主要功能是
+uc_get_object是返回用户的扩展资料。第三个参数如果指定为扩展资料的某一项时则返回数组(用户ID,用户名,指定扩展项)否则返回数组(用户ID,用户名, 数据库中的所有扩展项)。
+
+uc_object_set(),uc_object_addint(),这两个函数是设置，增减用户扩展资料功能。其中 uc_object_addint是专门针对int型扩展字段。如果这些扩展资料在应用中的数据库里也有那么这些字段在设置和更新时要进行同步，而只要将返回的字符输出到页面就可以了。如
+echo uc_object_set(1,1,'credit',1);
+echo uc_object_set(1,1,'addr','北京市');
+复制代码
+上面将同步各个应用中的积分，当然还是要修改每一个应用下面的api/uc.php。改法附后。
+设置多个字段目前无法同步　因此echo uc_object_set(1,1,array('credit'=>1,'addr'=>'北京市'));是没有效果的。但是ucenter中会更新资料，应用程序可以找一个合适的时机自行同步。
+
+uc_object_addint()中的$filed不能为数组，$value为增加的值，如果为负就会减少减少用户的指定扩展int型数据。
+uc_object_addint(1,1,'credit',1);增加用户1分。
+uc_object_addint(1,1,'credit',-5);扣除5分。
+
+同样增加如果应用中有相应的字段那么也要进行同步。同步方法是echo ,同uc_object_set。
+
+uc_object_addint中的if(!in_array($filed,array('credit'))){里面可以增加更多int类型的字段以便扩展你的功能，请根据需要进行增加。
+对于同步用户扩展的功能和从uc中取用户资料是差别同步是要同应用的api/uc.php进行通讯，而且uc_client是不知道其它应用的authkey但是ucenter知道,所以同步只能使用ucenter是知道所有的应用authkey。看下面是两种区别。
+要求同步的必须使用远程ucenter中的方法
+$return= call_user_func('uc_api_post', 'object', 'add', array('isuid'=>intval($isuid), 'username'=>$username,'filed'=>$filed,'value'=>$value));
+return $return;
+复制代码
+只取用户资料
+一般语句如下
+$return= call_user_func(UC_API_FUNC, 'object', 'get', array('isuid'=>intval($isuid), 'username'=>$username,'type'=>$type));
+return UC_CONNECT == 'mysql' ? $return : uc_unserialize($return);
+复制代码
+注意call_user_func中的第一个参数。
+*/
 ?>
